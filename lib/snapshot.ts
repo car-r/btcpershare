@@ -17,6 +17,7 @@ export type TapeSnapshotRow = {
   sats_basic: number;
   sats_fd: number | null;
   sata_shares: number | null;
+  preferred_in_denom: boolean;
   strc_held: number | null;
   verdict: Verdict | null;
   price: LiveField;
@@ -47,7 +48,7 @@ function accessionFrom(c: Company): string | null {
 }
 
 function sataShares(c: Company): number | null {
-  return c.ticker === "ASST" ? 9_073_914 : null;
+  return c.preferredShares;
 }
 
 export function snapshotRow(c: Company): TapeSnapshotRow {
@@ -64,6 +65,7 @@ export function snapshotRow(c: Company): TapeSnapshotRow {
     sats_basic: satsForPill(c, "basic") ?? 0,
     sats_fd: satsForPill(c, "fd"),
     sata_shares: sataShares(c),
+    preferred_in_denom: c.preferredInDenom,
     strc_held: null,
     verdict: c.lastWeek?.verdict ?? null,
     price: { value: c.priceSnapshot, as_of: c.cleanAsOf, live: true },
@@ -108,11 +110,10 @@ export function seriesFor(ticker: string): SeriesPoint[] {
     shares_fd: priorFd,
     sats_basic: satsPerShare(priorBtc, priorBasic),
     sats_fd: priorFd ? satsPerShare(priorBtc, priorFd) : null,
-    sata_shares: c.ticker === "ASST" ? 8_270_815 : null,
+    sata_shares: null,
     strc_held: null,
     verdict: null,
     accession: null,
   };
-  if (c.ticker === "ASST") prior.sata_shares = 9_073_914 - 803_099;
   return [prior, latest];
 }

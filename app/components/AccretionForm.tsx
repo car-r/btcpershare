@@ -39,6 +39,8 @@ export function AccretionForm() {
           <div className={"last-week " + result.verdict}>{formatYieldPct(result.yield)} sats/share</div>
           <div className="stat-row"><span className="k">Before</span><span className="v">{formatSats(result.satsStart)}</span></div>
           <div className="stat-row"><span className="k">After</span><span className="v">{formatSats(result.satsEnd)}</span></div>
+          <div className="stat-row"><span className="k">Preferred in denom</span><span className="v">{preset.preferredInDenom ? "yes" : "no"}</span></div>
+          {issuePreferred ? <div className="stat-row"><span className="k">SATA / preferred issued</span><span className="v">{issuePreferred.toLocaleString("en-US")}</span></div> : null}
           <ShareCard ticker={preset.ticker} line={(buyBtc >= 0 ? "+" : "") + buyBtc.toLocaleString("en-US") + " BTC"} sub={"sats/share " + formatYieldPct(result.yield)} />
         </section>
       </div>

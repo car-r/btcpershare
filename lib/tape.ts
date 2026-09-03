@@ -33,6 +33,9 @@ export type Company = {
   activities: ActivityPill[];
   lastBuy: LastBuy;
   lastWeek: LastWeek | null;
+  preferredShares: number | null;
+  preferredLabel: string | null;
+  preferredInDenom: boolean;
   hasFdPill: boolean;
   sources: string[];
   heroDefaultPill: Pill;
@@ -85,6 +88,9 @@ export const MSTR: Company = (() => {
       basis: "ADSO",
       label: "DILUTIVE -0.46% ADSO (188,628 → 187,751)",
     },
+    preferredShares: null,
+    preferredLabel: null,
+    preferredInDenom: false,
     hasFdPill: true,
     sources: [
       "https://www.sec.gov/Archives/edgar/data/1050446/000119312526375463/mstr-20260831.htm",
@@ -99,7 +105,6 @@ export const ASST: Company = (() => {
   const effectiveCommon = 93262570;
   const afds = 96523351;
   const sataOutstanding = 9073914;
-  void sataOutstanding;
   assertSats("ASST effective", btc, effectiveCommon, 24829);
   assertSats("ASST AFDS", btc, afds, 23990);
   const lastWeekStart = 23813;
@@ -137,6 +142,9 @@ export const ASST: Company = (() => {
       basis: "effective",
       label: "ACCRETIVE +4.3% (23,813 → 24,829)",
     },
+    preferredShares: sataOutstanding,
+    preferredLabel: "SATA",
+    preferredInDenom: false,
     hasFdPill: true,
     sources: [
       "https://www.sec.gov/Archives/edgar/data/1920406/000162828026059468/asst-20260831.htm",
@@ -180,6 +188,9 @@ export const XXI: Company = (() => {
       basis: "classA",
       label: "FLAT",
     },
+    preferredShares: null,
+    preferredLabel: null,
+    preferredInDenom: false,
     hasFdPill: false,
     sources: [
       "https://www.sec.gov/Archives/edgar/data/2070457/000121390026087471/ea0299640-10q_twentyone.htm",
