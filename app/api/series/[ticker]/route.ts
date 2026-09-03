@@ -1,5 +1,6 @@
 import { COMPANIES } from "@/lib/tape";
 import { seriesFor } from "@/lib/snapshot";
+import { asstQuarterly, asstSpark7 } from "@/lib/asst-quarterly";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -13,14 +14,21 @@ export async function GET(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "unknown ticker", ticker }, { status: 404 });
   }
   const t = ticker.toUpperCase();
-  const note =
-    t === "ASST"
-      ? "ASST 8-K warehouse. sats_basic = BTC * 1e8 / (Class A + Class B). SATA is preferred, not in that number."
-      : "Placeholder seed (latest filing plus prior-week lock). Full 8-K warehouse comes later.";
+  if (t === "ASST") {
+    return NextResponse.json({
+      ticker: t,
+      feed: "series",
+      note: "Weekly series is sats_basic = Class A+B. Quarterly sats are AFDS. Do not mix denoms or interpolate 2025-09-30 to 2026-03-09.",
+      denom: { weekly: "class_a+class_b", quarterly: "AFDS" },
+      series: seriesFor(ticker),
+      quarterly: asstQuarterly(),
+      sparkline_7: asstSpark7(),
+    });
+  }
   return NextResponse.json({
     ticker: t,
     feed: "series",
-    note,
+    note: "Placeholder seed (latest filing plus prior-week lock). Full 8-K warehouse comes later.",
     series: seriesFor(ticker),
   });
 }

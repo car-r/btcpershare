@@ -2,7 +2,7 @@
 
 type Pt = { as_of: string; sats_basic: number; btc: number };
 
-export function AsstChart({ points }: { points: Pt[] }) {
+export function AsstChart({ points, marks }: { points: Pt[]; marks: string[] }) {
   const w = 640;
   const h = 220;
   const pad = { l: 48, r: 12, t: 16, b: 28 };
@@ -17,12 +17,12 @@ export function AsstChart({ points }: { points: Pt[] }) {
   const X = (t: number) => pad.l + ((t - minX) / xspan) * (w - pad.l - pad.r);
   const Y = (v: number) => pad.t + (1 - (v - minY) / yspan) * (h - pad.t - pad.b);
   const d = points.map((p, i) => `${i ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(p.sats_basic).toFixed(1)}`).join(" ");
-  const marks = points.filter((p) => ["2026-06-01", "2026-08-14", "2026-08-28"].includes(p.as_of));
+  const marked = points.filter((p) => marks.includes(p.as_of));
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label="ASST sats per share from April to August 2026" style={{ width: "100%", height: "auto" }}>
+    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label="ASST sats per share, weekly Class A+B, March to August 2026" style={{ width: "100%", height: "auto" }}>
       <rect width={w} height={h} fill="#000" />
       <path d={d} fill="none" stroke="#F7931A" strokeWidth="2" />
-      {marks.map((p) => {
+      {marked.map((p) => {
         const t = new Date(p.as_of + "T00:00:00Z").getTime();
         return <circle key={p.as_of} cx={X(t)} cy={Y(p.sats_basic)} r="3.5" fill="#fff" stroke="#F7931A" />;
       })}
