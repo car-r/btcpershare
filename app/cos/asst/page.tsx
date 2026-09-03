@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AsstChart } from "../../components/AsstChart";
 import { ASST_FILINGS, asstSeries } from "@/lib/asst-series";
 import { formatBtc, formatSats } from "@/lib/sats";
+import { AsstLiveKpis } from "../../components/AsstLiveKpis";
 
 export default function AsstPage() {
   const series = asstSeries();
@@ -11,9 +12,10 @@ export default function AsstPage() {
     <div className="container">
       <p className="page-lead"><Link href="/cos">Companies</Link> / ASST</p>
       <h1 className="page-title">$ASST Strive</h1>
-      <p className="page-lead">sats/share = BTC × 100,000,000 / (Class A + Class B). SATA is preferred and is not in that number.</p>
+      <p className="page-lead">sats/share = BTC × 100,000,000 / (Class A + Class B). AFDS is Strive’s headline BPS. SATA is amplification, not a sats denom.</p>
       <div className="hero-number">{formatSats(last.sats_basic)}</div>
-      <div className="hero-sub">sats / share · {formatBtc(last.btc)} BTC · as of {last.as_of}</div>
+      <div className="hero-sub">sats basic · AFDS {formatSats(last.afds ? Math.round((last.btc * 100_000_000) / last.afds) : 0)} · {formatBtc(last.btc)} BTC · as of {last.as_of}</div>
+      <AsstLiveKpis />
       <div className="panel" style={{ marginTop: "1.25rem" }}>
         <div className="panel-title">BPS chart</div>
         <AsstChart points={series.filter((p) => p.as_of).map((p) => ({ as_of: p.as_of as string, sats_basic: p.sats_basic, btc: p.btc }))} />

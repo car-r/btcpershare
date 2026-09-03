@@ -10,6 +10,8 @@ export type AsstFiling = {
   effective_common: number;
   afds: number | null;
   sata: number | null;
+  cash_thousands: number | null;
+  strc_fv: number | null;
   strc_held: number | null;
   sats_basic: number;
   accession: string;

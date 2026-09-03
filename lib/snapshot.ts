@@ -1,8 +1,10 @@
 import { ACCRETION_PRESETS, COMPANIES, satsForPill, type Company } from "./tape";
 import { asstSeries } from "./asst-series";
 import { satsPerShare, type Verdict } from "./sats";
+import { asstSataKpis, type AsstSataKpis } from "./strive-kpis";
+import { fetchBtcSpot, type LiveField, type Spot } from "./spot";
 
-export type LiveField = { value: number | null; as_of: string | null; live: boolean; note?: string | null };
+export type { LiveField };
 
 export type TapeSnapshotRow = {
   ticker: string;
@@ -23,6 +25,7 @@ export type TapeSnapshotRow = {
   price: LiveField;
   mnav: LiveField;
   clean: LiveField;
+  sata: AsstSataKpis | null;
 };
 
 export type SeriesPoint = {
@@ -72,14 +75,21 @@ export function snapshotRow(c: Company): TapeSnapshotRow {
     price: { value: c.priceSnapshot, as_of: c.cleanAsOf, live: true },
     mnav: { value: c.mnavSnapshot, as_of: c.cleanAsOf, live: true },
     clean: { value: c.cleanSats, as_of: c.cleanAsOf, live: true, note: c.cleanNote },
+    sata: null,
   };
 }
 
-export function tapeSnapshot() {
+export async function tapeSnapshot() {
+  const spot: Spot = await fetchBtcSpot();
   return {
     feed: "snapshot" as const,
-    disclaimer: "Not financial advice. BTC and share counts are filing-locked until the next 8-K. price, mNAV, and clean are live fields.",
-    companies: COMPANIES.map(snapshotRow),
+    disclaimer: "Not financial advice. BTC and share counts are filing-locked until the next 8-K. Amplification, TAV, and coverage are live (BTC spot). SATA is preferred equity, not in sats/share.",
+    btc_spot: spot,
+    companies: COMPANIES.map((c) => {
+      const row = snapshotRow(c);
+      if (c.ticker !== "ASST") return row;
+      return { ...row, sata: asstSataKpis(spot) };
+    }),
   };
 }
 

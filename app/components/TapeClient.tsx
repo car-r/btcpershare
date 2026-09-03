@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { AsstLiveKpis } from "./AsstLiveKpis";
 import { COMPANIES, HERO_DEFAULT, satsForPill, type Pill } from "@/lib/tape";
 import { formatBtc, formatSats, formatYieldPct } from "@/lib/sats";
 
@@ -54,6 +55,7 @@ export function TapeClient() {
                 <div className="stat-row"><span className="k">Bitcoin held</span><span className="v">{formatBtc(c.btc)} BTC</span></div>
                 <div className="stat-row"><span className="k">sats / share</span><span className="v accent">{formatSats(c.ticker === ticker ? value : shown)}</span></div>
                 {c.preferredShares != null ? <div className="stat-row"><span className="k">{c.preferredLabel} outstanding</span><span className="v">{c.preferredShares.toLocaleString("en-US")}</span></div> : null}
+                {c.ticker === "ASST" ? <AsstLiveKpis compact /> : null}
               </div>
               {c.lastWeek ? <div className={"last-week " + c.lastWeek.verdict}>{c.lastWeek.label}</div> : null}
               {c.lastWeek ? spark(c.lastWeek.satsStart, c.lastWeek.satsEnd) : null}
