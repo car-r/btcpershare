@@ -1,5 +1,5 @@
 import { ACCRETION_PRESETS, COMPANIES, satsForPill, type Company } from "./tape";
-import { asstSeries } from "./asst-series";
+import { asstSeries, ASST_SERIES } from "./asst-series";
 import { satsPerShare, type Verdict } from "./sats";
 import { asstSataKpis, type AsstSataKpis } from "./strive-kpis";
 import { fetchBtcSpot, type LiveField, type Spot } from "./spot";
@@ -29,17 +29,23 @@ export type TapeSnapshotRow = {
 };
 
 export type SeriesPoint = {
+  ticker?: string;
   as_of: string | null;
+  filing_date?: string | null;
   btc: number;
+  pledged_btc?: number | null;
   shares_basic: number;
   shares_fd: number | null;
+  shares_fd_label?: string | null;
   sats_basic: number;
   sats_fd: number | null;
   sata_shares: number | null;
   strc_held: number | null;
   verdict: Verdict | null;
+  btc_yield_pct?: number | null;
   accession: string | null;
   url: string | null;
+  format?: string | null;
 };
 
 function accessionFrom(c: Company): string | null {
@@ -70,7 +76,7 @@ export function snapshotRow(c: Company): TapeSnapshotRow {
     sats_fd: satsForPill(c, "fd"),
     sata_shares: sataShares(c),
     preferred_in_denom: c.preferredInDenom,
-    strc_held: null,
+    strc_held: c.ticker === "ASST" ? (ASST_SERIES[ASST_SERIES.length - 1]?.strc_held ?? 505000) : null,
     verdict: c.lastWeek?.verdict ?? null,
     price: { value: c.priceSnapshot, as_of: c.cleanAsOf, live: true },
     mnav: { value: c.mnavSnapshot, as_of: c.cleanAsOf, live: true },

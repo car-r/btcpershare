@@ -1,5 +1,6 @@
 import raw from "@/data/asst-8k-series.json";
-import { satsPerShare, btcYield, verdictFromYield, type Verdict } from "./sats";
+import warehouse from "@/data/asst-series-warehouse.json";
+import { satsPerShare, type Verdict } from "./sats";
 
 export type AsstFiling = {
   as_of: string;
@@ -44,23 +45,59 @@ function check() {
 }
 check();
 
+export type AsstSeriesRow = {
+  ticker: "ASST";
+  as_of: string;
+  filing_date: string;
+  accession: string;
+  url: string;
+  btc: number;
+  pledged_btc: number | null;
+  shares_basic: number;
+  shares_fd: number | null;
+  shares_fd_label: string | null;
+  sats_basic: number;
+  sats_fd: number | null;
+  sata_shares: number | null;
+  strc_held: number | null;
+  verdict: Verdict | null;
+  btc_yield_pct: number | null;
+  format: string;
+};
+
+export const ASST_SERIES = warehouse as AsstSeriesRow[];
+
+function checkWarehouse() {
+  if (ASST_SERIES.length !== 22 || ASST_FILINGS.length !== 22) throw new Error("ASST series length");
+  if (ASST_SERIES[0].as_of !== "2026-03-09" || ASST_SERIES[1].as_of !== "2026-04-02") {
+    throw new Error("ASST series invented dates");
+  }
+  if (ASST_SERIES[0].verdict != null || ASST_SERIES[0].btc_yield_pct != null) {
+    throw new Error("ASST first row must have no prior");
+  }
+  const last = ASST_SERIES[ASST_SERIES.length - 1];
+  if (last.btc !== 23156 || last.sats_basic !== 24829 || last.strc_held !== 505000) {
+    throw new Error("ASST warehouse lock last row");
+  }
+  for (let i = 0; i < ASST_SERIES.length; i++) {
+    const w = ASST_SERIES[i];
+    const f = ASST_FILINGS[i];
+    if (w.as_of !== f.as_of) throw new Error("ASST as_of drift " + w.as_of);
+    if (w.shares_basic !== f.class_a + f.class_b) throw new Error("ASST SATA in denom " + w.as_of);
+    if (w.sats_basic !== f.sats_basic || w.btc !== f.btc) throw new Error("ASST sats drift " + w.as_of);
+    if (w.shares_fd !== f.afds) throw new Error("ASST AFDS drift " + w.as_of);
+    if ((w.as_of >= "2026-07-24") !== (w.shares_fd != null && w.shares_fd_label === "AFDS")) {
+      throw new Error("ASST AFDS window " + w.as_of);
+    }
+    if (w.as_of >= "2026-06-05") {
+      if (w.strc_held !== 505000) throw new Error("ASST STRC window " + w.as_of);
+    } else if (w.strc_held != null) {
+      throw new Error("ASST STRC too early " + w.as_of);
+    }
+  }
+}
+checkWarehouse();
+
 export function asstSeries() {
-  return ASST_FILINGS.map((r, i) => {
-    const prev = i > 0 ? ASST_FILINGS[i - 1] : null;
-    let verdict: Verdict | null = null;
-    if (prev) verdict = verdictFromYield(btcYield(prev.sats_basic, r.sats_basic));
-    return {
-      as_of: r.as_of,
-      btc: r.btc,
-      shares_basic: r.class_a + r.class_b,
-      shares_fd: r.afds,
-      sats_basic: r.sats_basic,
-      sats_fd: r.afds ? satsPerShare(r.btc, r.afds) : null,
-      sata_shares: r.sata,
-      strc_held: r.strc_held,
-      verdict,
-      accession: r.accession,
-      url: r.url,
-    };
-  });
+  return ASST_SERIES;
 }
