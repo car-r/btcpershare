@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function CalcIndex() { return (<div className="container"><h1 className="page-title">Calculators</h1><p className="page-lead">Same locked filings as the tape.</p><Link className="calc-link" href="/calc/sats"><h2>sats / share</h2><p>basic, FD, and clean pills that actually change the number.</p></Link><Link className="calc-link" href="/calc/accretion"><h2>Accretion checker</h2><p>Did a BTC buy accrete or dilute sats/share?</p></Link></div>); }

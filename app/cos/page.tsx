@@ -1,0 +1,1 @@
+export default function Page() { return (<div className="container"><h1 className="page-title">Companies</h1><p className="page-lead">MSTR, ASST, and XXI are on the tape. Metaplanet and the rest: days 31-60.</p></div>); }

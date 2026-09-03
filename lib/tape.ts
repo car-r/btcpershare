@@ -1,4 +1,4 @@
-import { satsPerShare, btcYield, verdictFromYield, type Verdict } from "../lib/sats";
+import { satsPerShare, btcYield, verdictFromYield, type Verdict } from "./sats";
 
 export type Pill = "basic" | "fd" | "clean";
 
