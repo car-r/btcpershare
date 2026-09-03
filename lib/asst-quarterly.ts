@@ -1,21 +1,54 @@
-import raw from "@/data/asst-quarterly.json";
+import raw from "@/data/asst-quarterly-company.json";
 import { satsPerShare, btcYield } from "./sats";
 import { ASST_SERIES } from "./asst-series";
 
-export type AsstQuarterly = {
+export type AsstQuarterlyRow = {
+  ticker: "ASST";
   as_of: string;
+  period: string;
+  label: string;
   btc: number;
   shares_fd: number;
-  shares_fd_label: "AFDS";
+  shares_fd_label: string;
   sats_fd: number;
-  sata_shares: number;
-  sata_notional: number;
-  debt: number;
-  btc_yield_qtd: number | null;
-  amplification: number | null;
+  btc_yield_qtd_pct: number | null;
+  amplification_pct: number | null;
+  class_a: number | null;
+  class_b: number | null;
+  shares_basic: number | null;
+  sats_basic: number | null;
+  sata_shares: number | null;
+  preferred_in_denom: false;
+  accession: string;
+  url: string;
   note: string;
-  source_accession: string;
 };
+
+type FileShape = {
+  series: string;
+  ticker: string;
+  denom: string;
+  preferred_in_denom: boolean;
+  source: { form: string; filing_date: string; accession: string; url: string; table: string; footnote: string };
+  rows: Omit<AsstQuarterlyRow, "preferred_in_denom" | "accession" | "url">[];
+};
+
+const file = raw as FileShape;
+
+export const ASST_QUARTERLY_META = {
+  series: "quarterly_company" as const,
+  ticker: "ASST" as const,
+  denom: "AFDS" as const,
+  preferred_in_denom: false as const,
+  source: file.source,
+};
+
+export const ASST_QUARTERLY: AsstQuarterlyRow[] = file.rows.map((r) => ({
+  ...r,
+  preferred_in_denom: false,
+  accession: file.source.accession,
+  url: file.source.url,
+}));
 
 const SPARK_DATES = [
   "2026-03-09",
@@ -29,50 +62,52 @@ const SPARK_DATES = [
 
 const SPARK_SATS = [19933, 19854, 21777, 24091, 23532, 23813, 24829] as const;
 
-type RawQ = {
-  as_of: string;
-  btc: number;
-  shares_fd: number;
-  shares_fd_label: "AFDS";
-  sats_fd: number;
-  sata_shares: number;
-  debt: number;
-  btc_yield_qtd: number | null;
-  amplification: number | null;
-  note: string;
-  source_accession: string;
-};
-
-const rows = raw as RawQ[];
-
-export const ASST_QUARTERLY: AsstQuarterly[] = rows.map((r) => ({
-  ...r,
-  sata_notional: r.sata_shares * 100,
-}));
-
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
 function check() {
+  if (file.preferred_in_denom !== false) throw new Error("ASST quarterly preferred in denom");
   if (ASST_QUARTERLY.length !== 4) throw new Error("ASST quarterly length");
-  if (ASST_QUARTERLY[0].as_of !== "2025-09-30" || ASST_QUARTERLY[3].as_of !== "2026-06-30") {
-    throw new Error("ASST quarterly dates");
+  const q3 = ASST_QUARTERLY[0];
+  const ye = ASST_QUARTERLY[1];
+  const q1 = ASST_QUARTERLY[2];
+  const q2 = ASST_QUARTERLY[3];
+  if (q3.sats_fd !== 13946 || ye.sats_fd !== 17037 || q1.sats_fd !== 18931 || q2.sats_fd !== 23465) {
+    throw new Error("ASST quarterly printed sats");
   }
+  const nick = satsPerShare(q1.btc, q1.shares_fd);
+  if (nick !== 18932) throw new Error("expected Q1 round nick 18932, got " + nick);
+  if (q1.sats_fd !== 18931) throw new Error("keep company-printed Q1 sats_fd");
+  for (const r of [q3, ye, q1]) {
+    if (r.class_a != null || r.class_b != null || r.shares_basic != null || r.sats_basic != null || r.sata_shares != null) {
+      throw new Error("invented A+B or SATA shares " + r.as_of);
+    }
+  }
+  if (q2.class_a == null || q2.class_b == null || q2.shares_basic == null || q2.sats_basic == null) {
+    throw new Error("Q2 missing A+B");
+  }
+  if (q2.class_a + q2.class_b !== q2.shares_basic) throw new Error("Q2 A+B");
+  if (satsPerShare(q2.btc, q2.shares_basic) !== 24241 || q2.sats_basic !== 24241) throw new Error("Q2 sats_basic");
+  if (q2.sata_shares !== 7829502) throw new Error("Q2 SATA");
   for (let i = 0; i < ASST_QUARTERLY.length; i++) {
     const r = ASST_QUARTERLY[i];
     const got = satsPerShare(r.btc, r.shares_fd);
     if (Math.abs(got - r.sats_fd) > 1) throw new Error("ASST quarterly sats " + r.as_of + " " + got);
     if (i > 0) {
       const y = round1(btcYield(ASST_QUARTERLY[i - 1].sats_fd, r.sats_fd) * 100);
-      if (r.btc_yield_qtd == null || y !== r.btc_yield_qtd) {
+      if (r.btc_yield_qtd_pct == null || y !== r.btc_yield_qtd_pct) {
         throw new Error("ASST quarterly yield " + r.as_of + " " + y);
       }
     }
+    if (r.accession !== "0001628280-26-047102" || !r.url.includes("000162828026047102")) {
+      throw new Error("ASST quarterly accession " + r.as_of);
+    }
   }
-  const q1 = ASST_QUARTERLY[2];
-  const ye = ASST_QUARTERLY[1];
-  if (q1.btc - ye.btc !== 6001) throw new Error("Semler BTC");
+  if (q3.amplification_pct !== 0) throw new Error("Q3 amp");
+  if (ye.amplification_pct !== 30.1 || q1.amplification_pct !== 47.1 || q2.amplification_pct !== 67.2) {
+    throw new Error("ASST quarterly amp");
+  }
 }
 
 function checkSpark() {
@@ -88,7 +123,10 @@ function checkSpark() {
 check();
 
 export function asstQuarterly() {
-  return ASST_QUARTERLY;
+  return {
+    ...ASST_QUARTERLY_META,
+    rows: ASST_QUARTERLY,
+  };
 }
 
 export function asstSpark7() {

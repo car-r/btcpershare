@@ -21,7 +21,7 @@ export async function GET(_req: Request, ctx: Ctx) {
       note: "Weekly series is sats_basic = Class A+B. Quarterly sats are AFDS. Do not mix denoms or interpolate 2025-09-30 to 2026-03-09.",
       denom: { weekly: "class_a+class_b", quarterly: "AFDS" },
       series: seriesFor(ticker),
-      quarterly: asstQuarterly(),
+      quarterly_company: asstQuarterly(),
       sparkline_7: asstSpark7(),
     });
   }

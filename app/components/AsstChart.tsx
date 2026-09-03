@@ -2,7 +2,7 @@
 
 type Pt = { as_of: string; sats_basic: number; btc: number };
 
-export function AsstChart({ points, marks }: { points: Pt[]; marks: string[] }) {
+export function AsstChart({ points, marks, label }: { points: Pt[]; marks: string[]; label: string }) {
   const w = 640;
   const h = 220;
   const pad = { l: 48, r: 12, t: 16, b: 28 };
@@ -19,7 +19,7 @@ export function AsstChart({ points, marks }: { points: Pt[]; marks: string[] }) 
   const d = points.map((p, i) => `${i ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(p.sats_basic).toFixed(1)}`).join(" ");
   const marked = points.filter((p) => marks.includes(p.as_of));
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label="ASST sats per share, weekly Class A+B, March to August 2026" style={{ width: "100%", height: "auto" }}>
+    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} style={{ width: "100%", height: "auto" }}>
       <rect width={w} height={h} fill="#000" />
       <path d={d} fill="none" stroke="#F7931A" strokeWidth="2" />
       {marked.map((p) => {
