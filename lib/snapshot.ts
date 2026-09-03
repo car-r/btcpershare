@@ -36,6 +36,7 @@ export type SeriesPoint = {
   strc_held: number | null;
   verdict: Verdict | null;
   accession: string | null;
+  url: string | null;
 };
 
 function accessionFrom(c: Company): string | null {
@@ -98,6 +99,7 @@ export function seriesFor(ticker: string): SeriesPoint[] {
     strc_held: null,
     verdict: c.lastWeek?.verdict ?? null,
     accession: accessionFrom(c),
+    url: c.sources.find((s) => s.includes("sec.gov")) ?? null,
   };
   if (!preset) return [latest];
   const priorBtc = preset.startBtc;
@@ -114,6 +116,7 @@ export function seriesFor(ticker: string): SeriesPoint[] {
     strc_held: null,
     verdict: null,
     accession: null,
+    url: null,
   };
   return [prior, latest];
 }
