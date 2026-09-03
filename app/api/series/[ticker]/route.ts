@@ -12,10 +12,15 @@ export async function GET(_req: Request, ctx: Ctx) {
   if (!known) {
     return NextResponse.json({ error: "unknown ticker", ticker }, { status: 404 });
   }
+  const t = ticker.toUpperCase();
+  const note =
+    t === "ASST"
+      ? "ASST 8-K warehouse. sats_basic = BTC * 1e8 / (Class A + Class B). SATA is preferred, not in that number."
+      : "Placeholder seed (latest filing plus prior-week lock). Full 8-K warehouse comes later.";
   return NextResponse.json({
-    ticker: ticker.toUpperCase(),
+    ticker: t,
     feed: "series",
-    note: "Placeholder seed (latest filing plus prior-week lock). Full 8-K warehouse comes later.",
+    note,
     series: seriesFor(ticker),
   });
 }

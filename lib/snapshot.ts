@@ -1,4 +1,5 @@
 import { ACCRETION_PRESETS, COMPANIES, satsForPill, type Company } from "./tape";
+import { asstSeries } from "./asst-series";
 import { satsPerShare, type Verdict } from "./sats";
 
 export type LiveField = { value: number | null; as_of: string | null; live: boolean; note?: string | null };
@@ -82,6 +83,7 @@ export function tapeSnapshot() {
 export function seriesFor(ticker: string): SeriesPoint[] {
   const c = COMPANIES.find((x) => x.ticker.toUpperCase() === ticker.toUpperCase());
   if (!c) return [];
+  if (c.ticker === "ASST") return asstSeries();
   const preset = ACCRETION_PRESETS.find((p) => p.ticker === c.ticker);
   const latest: SeriesPoint = {
     as_of: c.asOf,
