@@ -1,0 +1,66 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+  active?: "tape" | "calc" | "cos" | "news";
+}
+const {
+  title = "btcpershare",
+  description = "Did they stack more Bitcoin than they printed shares?",
+  active = "tape",
+} = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="inner">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true">₿</span>
+          <span>btcpershare</span>
+        </a>
+        <nav class="desktop-nav" aria-label="Primary">
+          <a href="/" class={active === "tape" ? "active" : undefined} aria-current={active === "tape" ? "page" : undefined}>Tape</a>
+          <a href="/calc" class={active === "calc" ? "active" : undefined} aria-current={active === "calc" ? "page" : undefined}>Calc</a>
+          <a href="/cos" class={active === "cos" ? "active" : undefined} aria-current={active === "cos" ? "page" : undefined}>Cos</a>
+          <a href="/news" class={active === "news" ? "active" : undefined} aria-current={active === "news" ? "page" : undefined}>News</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page">
+      <slot />
+    </main>
+
+    <footer class="site-footer">Not financial advice.</footer>
+
+    <nav class="bottom-nav" aria-label="Mobile">
+      <a href="/" class={active === "tape" ? "active" : undefined} aria-current={active === "tape" ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        Tape
+      </a>
+      <a href="/calc" class={active === "calc" ? "active" : undefined} aria-current={active === "calc" ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h3M13 14h3M8 18h3M13 18h3"/></svg>
+        Calc
+      </a>
+      <a href="/cos" class={active === "cos" ? "active" : undefined} aria-current={active === "cos" ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+        Cos
+      </a>
+      <a href="/news" class={active === "news" ? "active" : undefined} aria-current={active === "news" ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z"/></svg>
+        News
+      </a>
+    </nav>
+  </body>
+</html>

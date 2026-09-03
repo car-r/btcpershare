@@ -1,0 +1,21 @@
+{
+  "name": "btcpershare",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && bun run scripts/assert-dist.ts",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test": "bun test src/lib && bun run scripts/assert-sats.ts",
+    "assert:sats": "bun run scripts/assert-sats.ts",
+    "assert:dist": "bun run scripts/assert-dist.ts"
+  },
+  "dependencies": {
+    "astro": "5.18.2"
+  }
+}

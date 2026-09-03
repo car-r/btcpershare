@@ -1,0 +1,257 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { ACCRETION_PRESETS, runAccretion } from "../../data/tape";
+import { formatSats, formatYieldPct } from "../../lib/sats";
+
+const presets = ACCRETION_PRESETS.map((p) => ({
+  ...p,
+  result: runAccretion(p),
+}));
+const initial = presets[0];
+---
+<Layout title="btcpershare — Accretion" active="calc">
+  <div class="container" id="accretion-app" data-presets={JSON.stringify(presets)}>
+    <h1 class="page-title">Accretion checker</h1>
+    <p class="page-lead">Did they stack more Bitcoin than they printed shares?</p>
+
+    <div class="preset-row" id="presets">
+      {
+        presets.map((p, i) => (
+          <button
+            type="button"
+            class={`preset-btn ${i === 0 ? "active" : ""}`}
+            data-id={p.id}
+            aria-pressed={i === 0 ? "true" : "false"}
+          >
+            {p.ticker}
+          </button>
+        ))
+      }
+    </div>
+
+    <div class="accretion-layout">
+      <div class="panel">
+        <h2>Inputs</h2>
+        <div class="field">
+          <label for="company">Company</label>
+          <select id="company">
+            {presets.map((p) => <option value={p.id}>{p.name + " $" + p.ticker}</option>)}
+          </select>
+        </div>
+        <div class="field">
+          <label for="startBtc">Start BTC</label>
+          <input id="startBtc" type="number" />
+        </div>
+        <div class="field">
+          <label for="startShares">Start shares</label>
+          <input id="startShares" type="number" />
+        </div>
+        <div class="field">
+          <label for="buyBtc">BTC bought</label>
+          <input id="buyBtc" type="number" />
+        </div>
+        <div class="field">
+          <label for="buyPx">BTC price (USD)</label>
+          <input id="buyPx" type="number" />
+        </div>
+        <div class="field">
+          <label for="issueCommon">Shares issued (common)</label>
+          <input id="issueCommon" type="number" />
+        </div>
+        <div class="field">
+          <label for="issuePreferred">Preferred issued (SATA etc.)</label>
+          <input id="issuePreferred" type="number" />
+        </div>
+        <div class="field">
+          <label for="cashRaised">Cash raised (USD)</label>
+          <input id="cashRaised" type="number" />
+        </div>
+        <p class="clean-note">Preferred is displayed but not in the sats denominator (ASST SATA).</p>
+      </div>
+
+      <div>
+        <div class="panel verdict-card">
+          <div class="eyebrow">VERDICT</div>
+          <p class={`big ${initial.result.verdict}`} id="verdict-word">{initial.result.verdict.toUpperCase()}</p>
+          <p class={`pct ${initial.result.verdict}`} id="verdict-pct">
+            {formatYieldPct(initial.result.yield)} sats/share
+          </p>
+          <div class="before-after">
+            <span class="before">Before <strong id="sats-before">{formatSats(initial.result.satsStart)}</strong></span>
+            <span aria-hidden="true">→</span>
+            <span class={`after ${initial.result.verdict}`}>After <strong id="sats-after">{formatSats(initial.result.satsEnd)}</strong></span>
+          </div>
+        </div>
+
+        <div class="share-card-preview" id="share-preview">
+          <div class="line1" id="share-line1">{"$" + initial.ticker + " • +" + initial.buyBtc.toLocaleString("en-US") + " BTC"}</div>
+          <div class="line2" id="share-line2">sats/share {formatYieldPct(initial.result.yield)}</div>
+          <div class="via">via @btcpershare • BTC Per Share</div>
+        </div>
+        <button type="button" class="download-btn" id="download-card">Download share card</button>
+        <canvas id="share-canvas" width="1200" height="630" hidden></canvas>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  type Preset = {
+    id: string;
+    ticker: string;
+    name: string;
+    startBtc: number;
+    startShares: number;
+    buyBtc: number;
+    buyPx: number;
+    issueCommon: number;
+    issuePreferred: number;
+    cashRaised: number;
+    preferredInDenom: boolean;
+  };
+
+  const root = document.getElementById("accretion-app")!;
+  const presets: Preset[] = JSON.parse(root.dataset.presets || "[]");
+  let activeId = presets[0]?.id ?? "ASST";
+
+  const els = {
+    company: document.getElementById("company") as HTMLSelectElement,
+    startBtc: document.getElementById("startBtc") as HTMLInputElement,
+    startShares: document.getElementById("startShares") as HTMLInputElement,
+    buyBtc: document.getElementById("buyBtc") as HTMLInputElement,
+    buyPx: document.getElementById("buyPx") as HTMLInputElement,
+    issueCommon: document.getElementById("issueCommon") as HTMLInputElement,
+    issuePreferred: document.getElementById("issuePreferred") as HTMLInputElement,
+    cashRaised: document.getElementById("cashRaised") as HTMLInputElement,
+    verdictWord: document.getElementById("verdict-word")!,
+    verdictPct: document.getElementById("verdict-pct")!,
+    satsBefore: document.getElementById("sats-before")!,
+    satsAfter: document.getElementById("sats-after")!,
+    shareLine1: document.getElementById("share-line1")!,
+    shareLine2: document.getElementById("share-line2")!,
+    download: document.getElementById("download-card") as HTMLButtonElement,
+    canvas: document.getElementById("share-canvas") as HTMLCanvasElement,
+  };
+
+  function satsPerShare(btc: number, shares: number) {
+    return Math.round((btc * 100_000_000) / shares);
+  }
+  function btcYield(a: number, b: number) {
+    return b / a - 1;
+  }
+  function verdict(y: number) {
+    if (y > 0.0005) return "accretive";
+    if (y < -0.0005) return "dilutive";
+    return "flat";
+  }
+  function fmtSats(n: number) {
+    return Math.round(n).toLocaleString("en-US");
+  }
+  function fmtYield(y: number) {
+    const pct = y * 100;
+    const sign = pct > 0 ? "+" : "";
+    if (Math.abs(pct) >= 1) return sign + pct.toFixed(1) + "%";
+    return sign + pct.toFixed(2) + "%";
+  }
+
+  function load(id: string) {
+    const p = presets.find((x) => x.id === id)!;
+    activeId = id;
+    els.company.value = id;
+    els.startBtc.value = String(p.startBtc);
+    els.startShares.value = String(p.startShares);
+    els.buyBtc.value = String(p.buyBtc);
+    els.buyPx.value = String(p.buyPx);
+    els.issueCommon.value = String(p.issueCommon);
+    els.issuePreferred.value = String(p.issuePreferred);
+    els.cashRaised.value = String(p.cashRaised);
+    document.querySelectorAll("#presets .preset-btn").forEach((btn) => {
+      const on = (btn as HTMLElement).dataset.id === id;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    // Fix select option labels
+    Array.from(els.company.options).forEach((opt) => {
+      const pr = presets.find((x) => x.id === opt.value);
+      if (pr) opt.textContent = pr.name + " $" + pr.ticker;
+    });
+    render();
+  }
+
+  function compute() {
+    const p = presets.find((x) => x.id === activeId)!;
+    const startBtc = Number(els.startBtc.value);
+    const startShares = Number(els.startShares.value);
+    const buyBtc = Number(els.buyBtc.value);
+    const issueCommon = Number(els.issueCommon.value);
+    const issuePreferred = Number(els.issuePreferred.value);
+    const endBtc = startBtc + buyBtc;
+    const endShares = startShares + issueCommon + (p.preferredInDenom ? issuePreferred : 0);
+    const satsStart = satsPerShare(startBtc, startShares);
+    const satsEnd = satsPerShare(endBtc, endShares);
+    const y = btcYield(satsStart, satsEnd);
+    return { ticker: p.ticker, buyBtc, satsStart, satsEnd, y, v: verdict(y) };
+  }
+
+  function render() {
+    const r = compute();
+    els.verdictWord.textContent = r.v.toUpperCase();
+    els.verdictWord.className = "big " + r.v;
+    els.verdictPct.textContent = fmtYield(r.y) + " sats/share";
+    els.verdictPct.className = "pct " + r.v;
+    els.satsBefore.textContent = fmtSats(r.satsStart);
+    els.satsAfter.textContent = fmtSats(r.satsEnd);
+    const afterEl = els.satsAfter.parentElement!;
+    afterEl.className = "after " + r.v;
+    els.shareLine1.textContent = "$" + r.ticker + " • +" + r.buyBtc.toLocaleString("en-US") + " BTC";
+    els.shareLine2.textContent = "sats/share " + fmtYield(r.y);
+  }
+
+  function downloadCard() {
+    const r = compute();
+    const ctx = els.canvas.getContext("2d")!;
+    const w = els.canvas.width;
+    const h = els.canvas.height;
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, w, h);
+    // orange accent bar
+    ctx.fillStyle = "#F7931A";
+    ctx.fillRect(0, 0, 16, h);
+    ctx.beginPath();
+    ctx.arc(110, 120, 48, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#000";
+    ctx.font = "bold 48px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("B", 110, 136);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#F7931A";
+    ctx.font = "bold 64px system-ui, sans-serif";
+    ctx.fillText("$" + r.ticker + "  •  +" + r.buyBtc.toLocaleString("en-US") + " BTC", 190, 140);
+    ctx.font = "bold 72px system-ui, sans-serif";
+    ctx.fillText("sats/share " + fmtYield(r.y), 190, 250);
+    ctx.fillStyle = r.v === "accretive" ? "#22c55e" : r.v === "dilutive" ? "#ff6b35" : "#8a8a8a";
+    ctx.font = "bold 48px system-ui, sans-serif";
+    ctx.fillText(r.v.toUpperCase(), 190, 340);
+    ctx.fillStyle = "#8a8a8a";
+    ctx.font = "32px system-ui, sans-serif";
+    ctx.fillText(fmtSats(r.satsStart) + "  →  " + fmtSats(r.satsEnd) + " sats", 190, 420);
+    ctx.fillText("via @btcpershare", 190, 560);
+    const a = document.createElement("a");
+    a.download = r.ticker.toLowerCase() + "-accretion.png";
+    a.href = els.canvas.toDataURL("image/png");
+    a.click();
+  }
+
+  document.querySelectorAll("#presets .preset-btn").forEach((btn) => {
+    btn.addEventListener("click", () => load((btn as HTMLElement).dataset.id!));
+  });
+  els.company.addEventListener("change", () => load(els.company.value));
+  [
+    els.startBtc, els.startShares, els.buyBtc, els.buyPx,
+    els.issueCommon, els.issuePreferred, els.cashRaised,
+  ].forEach((el) => el.addEventListener("input", render));
+  els.download.addEventListener("click", downloadCard);
+
+  load(activeId);
+</script>
