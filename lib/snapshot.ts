@@ -2,7 +2,7 @@ import { ACCRETION_PRESETS, COMPANIES, satsForPill, type Company } from "./tape"
 import { asstSeries, ASST_SERIES } from "./asst-series";
 import { satsPerShare, type Verdict } from "./sats";
 import { asstSataKpis, type AsstSataKpis } from "./strive-kpis";
-import { fetchAsstLast, fetchBtcSpot, type LiveField, type Spot } from "./spot";
+import { fetchAsstLast, fetchBtcSpot, fetchEquityLast, mnavMktCap, type LiveField, type Spot } from "./spot";
 
 export type { LiveField };
 
@@ -24,6 +24,8 @@ export type TapeSnapshotRow = {
   verdict: Verdict | null;
   price: LiveField;
   mnav: LiveField;
+  /** Always market-cap mNAV; never EV. */
+  mnav_basis: "mkt_cap";
   clean: LiveField;
   sata: AsstSataKpis | null;
 };
@@ -78,24 +80,50 @@ export function snapshotRow(c: Company): TapeSnapshotRow {
     preferred_in_denom: c.preferredInDenom,
     strc_held: c.ticker === "ASST" ? (ASST_SERIES[ASST_SERIES.length - 1]?.strc_held ?? 505000) : null,
     verdict: c.lastWeek?.verdict ?? null,
-    price: { value: c.priceSnapshot, as_of: c.cleanAsOf, live: true },
-    mnav: { value: c.mnavSnapshot, as_of: c.cleanAsOf, live: true },
-    clean: { value: c.cleanSats, as_of: c.cleanAsOf, live: true, note: c.cleanNote },
+    price: { value: c.priceSnapshot, as_of: c.cleanAsOf, live: false },
+    mnav: { value: c.mnavSnapshot, as_of: c.cleanAsOf, live: false },
+    mnav_basis: "mkt_cap",
+    clean: { value: c.cleanSats, as_of: c.cleanAsOf, live: false, note: c.cleanNote },
     sata: null,
   };
 }
 
 export async function tapeSnapshot() {
-  const [btcSpot, asstSpot]: [Spot, Spot] = await Promise.all([fetchBtcSpot(), fetchAsstLast()]);
+  const [btcSpot, mstrPx, asstSpot, xxiPx]: [Spot, Spot, Spot, Spot] = await Promise.all([
+    fetchBtcSpot(),
+    fetchEquityLast("MSTR"),
+    fetchAsstLast(),
+    fetchEquityLast("XXI"),
+  ]);
+  const pxByTicker: Record<string, Spot> = {
+    MSTR: mstrPx,
+    ASST: asstSpot,
+    XXI: xxiPx,
+  };
+
   return {
     feed: "snapshot" as const,
-    disclaimer: "Not financial advice. BTC and share counts are filing-locked until the next 8-K. Amp/TAV/NTAV/coverage are live (BTC spot). EV uses live ASST last. SATA is preferred equity, not in sats/share. Do not scrape mNAV.",
+    disclaimer:
+      "Not financial advice. BTC and share counts are filing-locked until the next 8-K. mNAV shown is market-cap mNAV (not EV). Amp/TAV/NTAV/coverage are live (BTC spot). SATA is preferred equity, not in sats/share.",
     btc_spot: btcSpot,
     asst_px: asstSpot,
     companies: COMPANIES.map((c) => {
       const row = snapshotRow(c);
-      if (c.ticker !== "ASST") return row;
-      return { ...row, sata: asstSataKpis(btcSpot, asstSpot) };
+      const px = pxByTicker[c.ticker] ?? { value: null, as_of: null, live: false, source: null };
+      const liveMnav = mnavMktCap(px.value, c.basicShares, c.btc, btcSpot.value);
+      const priceField: LiveField =
+        px.value != null
+          ? { value: px.value, as_of: px.as_of, live: px.live }
+          : { value: c.priceSnapshot, as_of: c.cleanAsOf, live: false };
+      const mnavField: LiveField =
+        liveMnav != null
+          ? { value: liveMnav, as_of: px.as_of ?? btcSpot.as_of, live: true }
+          : c.mnavSnapshot != null
+            ? { value: c.mnavSnapshot, as_of: c.cleanAsOf, live: false }
+            : { value: null, as_of: null, live: false };
+      const next = { ...row, price: priceField, mnav: mnavField, mnav_basis: "mkt_cap" as const };
+      if (c.ticker !== "ASST") return next;
+      return { ...next, sata: asstSataKpis(btcSpot, asstSpot) };
     }),
   };
 }

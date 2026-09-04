@@ -3,8 +3,9 @@ import "./globals.css";
 import { Nav } from "./components/Nav";
 
 export const metadata: Metadata = {
-  title: "btcpershare - Tape",
-  description: "Did they stack more Bitcoin than they printed shares? Not financial advice.",
+  title: "btcpershare — sats/share tape",
+  description:
+    "Companies that buy Bitcoin with stock can make each share own more Bitcoin — or less. This site watches that number, and the price tag on it. Not financial advice.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
