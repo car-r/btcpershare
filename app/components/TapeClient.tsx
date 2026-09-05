@@ -3,7 +3,19 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { COMPANIES, HERO_DEFAULT, satsForPill, type Pill } from "@/lib/tape";
 import { formatBtc, formatSats, formatYieldPct } from "@/lib/sats";
+import {
+  SHARES_CAPTION,
+  SHARES_DEFAULT_N,
+  SHARES_FOOTER,
+  SHARES_PRESETS,
+  chartPointsFor,
+  formatClaimedBtc,
+  liveClaimed,
+  sharesSeriesFor,
+} from "@/lib/shares-over-time";
 import { Tip } from "./Tip";
+import { SharesOverTimeChart } from "./SharesOverTimeChart";
+import { ShareCard } from "./ShareCard";
 
 type LiveField = { value: number | null; as_of: string | null; live: boolean };
 type TapeRow = {
@@ -34,7 +46,7 @@ function latestFilingEnglish(): string {
 export function TapeClient() {
   const [ticker, setTicker] = useState<string>(HERO_DEFAULT.ticker);
   const [pill, setPill] = useState<Pill>(HERO_DEFAULT.pill);
-  const [shares, setShares] = useState(100);
+  const [shares, setShares] = useState(SHARES_DEFAULT_N);
   const [liveByTicker, setLiveByTicker] = useState<Record<string, TapeRow>>({});
 
   useEffect(() => {
@@ -67,6 +79,16 @@ export function TapeClient() {
   const myBtc = mySats / 100_000_000;
 
   const pillLabel = pill === "fd" ? (company.fdLabel ?? "ADSO") : pill;
+
+  // Over-time series (ADSO/AFDS from seed). XXI has none.
+  const overTimeSeries = sharesSeriesFor(ticker);
+  const overTimeLive = liveClaimed(ticker, shares);
+  const chartPts = useMemo(() => chartPointsFor(ticker, shares), [ticker, shares]);
+
+  // Prefer seed ADSO/AFDS live claim when available for the over-time headline
+  const claimedBtc = overTimeLive?.btc ?? myBtc;
+  const claimedSats = overTimeLive?.sats ?? Math.round(mySats);
+  const claimedDenom = overTimeLive?.denomLabel ?? pillLabel;
 
   return (
     <div className="container">
@@ -151,7 +173,7 @@ export function TapeClient() {
         <p>Twenty One was flat.</p>
       </section>
 
-      {/* 4) My shares micro-calc */}
+      {/* 4) My shares — live claim + 100-shares-over-time chart */}
       <section className="my-shares panel" aria-label="My shares">
         <div className="panel-title">My shares</div>
         <div className="my-shares-row">
@@ -173,7 +195,7 @@ export function TapeClient() {
             </select>
           </div>
           <div className="field">
-            <label>Shares</label>
+            <label>Shares (N)</label>
             <input
               inputMode="numeric"
               value={shares}
@@ -181,13 +203,53 @@ export function TapeClient() {
             />
           </div>
         </div>
+        <div className="shares-presets" role="group" aria-label="Share presets">
+          {SHARES_PRESETS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className="shares-preset"
+              aria-pressed={shares === n}
+              onClick={() => setShares(n)}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+
+        <h3 className="shares-ot-title">
+          BTC claimed by {shares.toLocaleString("en-US")} shares of {ticker}
+        </h3>
         <p className="my-shares-out">
-          {shares.toLocaleString("en-US")} shares of {ticker} → {myBtc.toFixed(4)} BTC →{" "}
-          {Math.round(mySats).toLocaleString("en-US")} sats
+          {shares.toLocaleString("en-US")} shares of {ticker} → {formatClaimedBtc(claimedBtc)} BTC →{" "}
+          {claimedSats.toLocaleString("en-US")} sats
         </p>
         <p className="my-shares-basis muted">
-          Using {pillLabel} ({formatSats(value)} sats/share).
+          Using {claimedDenom}
+          {overTimeLive
+            ? ` (${formatSats(overTimeLive.satsAdso)} sats/share).`
+            : ` (${formatSats(value)} sats/share).`}
         </p>
+
+        {overTimeSeries && chartPts.length > 0 ? (
+          <>
+            <p className="shares-caption">{SHARES_CAPTION}</p>
+            <SharesOverTimeChart points={chartPts} ticker={ticker} n={shares} />
+            <ShareCard
+              ticker={ticker}
+              n={shares}
+              btc={claimedBtc}
+              points={chartPts}
+              denomLabel={overTimeSeries.denomLabel}
+            />
+          </>
+        ) : (
+          <p className="shares-no-series muted">
+            Live claim only for ${ticker} — no seed series yet (no invented chart).
+          </p>
+        )}
+
+        <p className="shares-footer muted">{SHARES_FOOTER}</p>
         <Link className="calc-inline-link" href="/calc">
           Full calculator →
         </Link>

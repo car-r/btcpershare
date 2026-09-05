@@ -1,6 +1,7 @@
 import { COMPANIES } from "@/lib/tape";
 import { seriesFor } from "@/lib/snapshot";
 import { asstQuarterly, asstSpark7 } from "@/lib/asst-quarterly";
+import { chartPointsFor, sharesSeriesFor } from "@/lib/shares-over-time";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,17 @@ export async function GET(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "unknown ticker", ticker }, { status: 404 });
   }
   const t = ticker.toUpperCase();
+  const overTime = sharesSeriesFor(t);
+  const shares_over_time = overTime
+    ? {
+        denom: overTime.denomLabel,
+        live_sats_adso: overTime.liveSatsAdso,
+        n100: chartPointsFor(t, 100),
+        series: overTime.points,
+        note: "Seed only. Y-axis = BTC claimed by N shares. Step, no interpolate. No invented weekly ADSO.",
+      }
+    : null;
+
   if (t === "ASST") {
     return NextResponse.json({
       ticker: t,
@@ -23,6 +35,7 @@ export async function GET(_req: Request, ctx: Ctx) {
       series: seriesFor(ticker),
       quarterly_company: asstQuarterly(),
       sparkline_7: asstSpark7(),
+      shares_over_time,
     });
   }
   return NextResponse.json({
@@ -30,5 +43,6 @@ export async function GET(_req: Request, ctx: Ctx) {
     feed: "series",
     note: "Placeholder seed (latest filing plus prior-week lock). Full 8-K warehouse comes later.",
     series: seriesFor(ticker),
+    shares_over_time,
   });
 }

@@ -1,0 +1,158 @@
+{
+  "feature": "100_shares_over_time_v1",
+  "formula": {
+    "sats_adso": "btc_held * 100_000_000 / adso_shares",
+    "btc_per_n_shares": "n * sats_adso / 100_000_000",
+    "default_n": 100,
+    "presets": [
+      10,
+      100
+    ],
+    "y_axis": "BTC claimed by N shares (not USD, not mNAV)",
+    "caption": "Same N shares. Line up = accretive. Line down = dilutive. ADSO, split-adjusted.",
+    "mstr_split": "Aug 7 2024 10-for-1; official Strategy BPS already restated"
+  },
+  "mstr": {
+    "live": {
+      "btc_held": 845050,
+      "sats_adso": 187751,
+      "implied_adso": 450090000,
+      "n100": {
+        "btc": 0.187751,
+        "sats": 18775100
+      },
+      "n10": {
+        "btc": 0.0187751,
+        "sats": 1877510
+      }
+    },
+    "series": [
+      {
+        "date": "2020-12-31",
+        "sats_adso": 56598,
+        "btc_per_100": 0.0566,
+        "note": "Strategy briefing / YE"
+      },
+      {
+        "date": "2023-12-31",
+        "sats_adso": 91097,
+        "btc_per_100": 0.0911,
+        "note": "10-K"
+      },
+      {
+        "date": "2024-12-31",
+        "sats_adso": 158826,
+        "btc_per_100": 0.1588,
+        "note": "10-K"
+      },
+      {
+        "date": "2025-12-31",
+        "sats_adso": 194986,
+        "btc_per_100": 0.195,
+        "note": "10-K"
+      },
+      {
+        "date": "2026-03-31",
+        "sats_adso": 201170,
+        "btc_per_100": 0.2012,
+        "note": "10-Q"
+      },
+      {
+        "date": "2026-06-30",
+        "sats_adso": 210824,
+        "btc_per_100": 0.2108,
+        "note": "846000 BTC / 401.283e6 ADSO"
+      },
+      {
+        "date": "2026-08-30",
+        "sats_adso": 187751,
+        "btc_per_100": 0.1878,
+        "note": "8-K Aug 31 + investor briefing; 845050 BTC; matches live site"
+      }
+    ]
+  },
+  "asst": {
+    "live": {
+      "sats_adso": 23990,
+      "note": "AFDS / dashboard Sats per Share; 100 \u2192 0.023990 BTC \u2192 2,399,000 sats",
+      "last_week_pct": 4.3,
+      "verdict": "accretive"
+    },
+    "btc_seed": [
+      {
+        "date": "2025-12-31",
+        "btc_held": 7627,
+        "note": "10-K"
+      },
+      {
+        "date": "2026-03-17",
+        "btc_held": 13628,
+        "note": "10-K subsequent"
+      },
+      {
+        "date": "2026-08-14",
+        "btc_held": 20246,
+        "note": "8-K"
+      },
+      {
+        "date": "2026-08-21",
+        "btc_held": 21356,
+        "note": "8-K"
+      },
+      {
+        "date": "2026-08-28",
+        "btc_held": 23156,
+        "note": "8-K"
+      }
+    ],
+    "sats_seed_known": [
+      {
+        "date": "2025-12-31",
+        "sats_adso": 17037,
+        "btc_per_100": 0.017037,
+        "note": "YE25 AFDS from Jul 6 8-K quarterly table"
+      },
+      {
+        "date": "2026-03-31",
+        "sats_adso": 18931,
+        "btc_per_100": 0.018931,
+        "note": "Q1 AFDS (use for ~Mar 17 Semler; do not invent Mar 17 ADSO)"
+      },
+      {
+        "date": "2026-06-30",
+        "sats_adso": 23465,
+        "btc_per_100": 0.023465,
+        "note": "Q2 prelim AFDS"
+      },
+      {
+        "date": "2026-08-28",
+        "sats_adso": 23990,
+        "btc_per_100": 0.02399,
+        "note": "live AFDS; matches site"
+      }
+    ],
+    "note": "Carson listed mid-Aug BTC points without AFDS. For v1 chart use sats_seed_known only (step, no interpolate). Do not invent weekly AFSO for Aug 14/21. Optional: show BTC held as secondary, but Y-axis must be BTC claimed by N shares from sats."
+  },
+  "ui": {
+    "title": "BTC claimed by {N} shares of {TICKER}",
+    "line": "orange",
+    "range": "MAX only v1 (MSTR 2020\u2192now, ASST 2025\u2192now)",
+    "step": true,
+    "footer": "Not financial advice. Filing dates, not daily marks."
+  },
+  "share_card": {
+    "bg": "#0B0D10",
+    "line": "orange",
+    "headline": "{N} ${TICKER} \u2192 {btc} BTC",
+    "sub": "ADSO \u00b7 split-adjusted \u00b7 btcpershare.io",
+    "size": "1600x900",
+    "use": "Tuesday X image"
+  },
+  "do_not": [
+    "full 195-company table",
+    "USD primary axis",
+    "invent weekly ADSO 2020-2025",
+    "block on EDGAR parse",
+    "payments/Pro/ads"
+  ]
+}
