@@ -1,0 +1,31 @@
+[
+  {
+    "ticker": "XXI",
+    "form": "10-Q",
+    "filedAt": "2026-06-30",
+    "periodEnd": "2026-06-30",
+    "accession": "0001213900-26-087471",
+    "url": "https://www.sec.gov/Archives/edgar/data/2070457/000121390026087471/ea0299640-10q_twentyone.htm",
+    "btcHeld": 43514,
+    "btcBought": null,
+    "btcSold": null,
+    "basicShares": 346636211,
+    "adso": null,
+    "adsoEst": false,
+    "atmOn": false,
+    "sataOn": null,
+    "sharesIssued": null,
+    "atmProceedsUsd": null,
+    "pledgedBtc": 16116,
+    "debtUsd": null,
+    "prefNotionalUsd": null,
+    "usdCash": null,
+    "usdReserve": null,
+    "satsBasic": 12553,
+    "satsAdso": null,
+    "satsPrevAdso": 12553,
+    "satsChgPct": 0,
+    "verdict": "flat",
+    "notes": null
+  }
+]

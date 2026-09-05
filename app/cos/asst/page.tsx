@@ -1,27 +1,40 @@
 import Link from "next/link";
 import { AsstChart } from "../../components/AsstChart";
+import { YieldBars } from "../../components/YieldBars";
 import { ASST_FILINGS, asstSeries } from "@/lib/asst-series";
 import { ASST_QUARTERLY, ASST_SPARK_DATES } from "@/lib/asst-quarterly";
 import { ASST_CAP_MIX_000s, ASST_YIELD_LOCK } from "@/lib/strive-kpis";
 import { formatBtc, formatSats } from "@/lib/sats";
 import { AsstLiveKpis } from "../../components/AsstLiveKpis";
+import { bars } from "@/lib/filings";
 
 export default function AsstPage() {
   const series = asstSeries();
   const last = ASST_FILINGS[ASST_FILINGS.length - 1];
   const weekly = ASST_FILINGS.filter((r) => r.as_of >= "2026-05-22");
+  const yieldBars = bars("ASST").map((r) => ({
+    periodEnd: r.periodEnd,
+    satsChgPct: r.satsChgPct as number,
+    verdict: r.verdict,
+  }));
+  const lastFdSats = series[series.length - 1]?.sats_fd ?? null;
   return (
     <div className="container">
       <p className="page-lead"><Link href="/cos">Companies</Link> / ASST</p>
       <h1 className="page-title">$ASST Strive</h1>
       <p className="page-lead">Effective = Class A + Class B + pre-funded warrants (PF is 0, so A+B). AFDS is Strive&apos;s Sats per Share. Traditional warrants (~26.6M) are in neither. SATA is never in the denom.</p>
       <div className="hero-number">{formatSats(last.sats_basic)}</div>
-      <div className="hero-sub">Effective {formatSats(last.sats_basic)} · AFDS {formatSats(last.afds ? Math.round((last.btc * 100_000_000) / last.afds) : 0)} · {formatBtc(last.btc)} BTC · as of {last.as_of}</div>
+      <div className="hero-sub">Effective {formatSats(last.sats_basic)} · AFDS {formatSats(lastFdSats ?? 0)} · {formatBtc(last.btc)} BTC · as of {last.as_of}</div>
       <AsstLiveKpis />
       <div className="panel" style={{ marginTop: "1.25rem" }}>
         <div className="panel-title">BPS chart</div>
         <AsstChart label="ASST weekly sats basic, Class A plus Class B" points={series.filter((p) => p.as_of).map((p) => ({ as_of: p.as_of as string, sats_basic: p.sats_basic, btc: p.btc }))} marks={[...ASST_SPARK_DATES]} />
         <p className="page-lead">Weekly sats_basic (Class A+B). Marks: Mar 9 19,933 → Apr 2 19,854 → May 22 21,777 → Jun 1 24,091 → Aug 14 23,532 → Aug 21 23,813 → Aug 28 24,829. No interpolation before Mar 9.</p>
+      </div>
+      <div className="panel" style={{ marginTop: "1.25rem" }}>
+        <div className="panel-title">Weekly yield bars</div>
+        <YieldBars label="ASST weekly sats change bars" bars={yieldBars} />
+        <p className="page-lead">Green/red from filings satsChgPct only ({yieldBars.length} weeks). Copied from warehouse — not recomputed.</p>
       </div>
       <h2 className="page-title" style={{ fontSize: "1.2rem", marginTop: "1.5rem" }}>Era</h2>
       <ul className="page-lead">
@@ -62,15 +75,18 @@ export default function AsstPage() {
         <table className="desktop-table">
           <thead><tr><th>As of</th><th>BTC</th><th>sats basic</th><th>AFDS sats</th><th>SATA</th></tr></thead>
           <tbody>
-            {weekly.map((r) => (
-              <tr key={r.as_of}>
-                <td>{r.as_of}</td>
-                <td>{formatBtc(r.btc)}</td>
-                <td>{formatSats(r.sats_basic)}</td>
-                <td>{r.afds ? formatSats(Math.round((r.btc * 100_000_000) / r.afds)) : "—"}</td>
-                <td>{r.sata ? r.sata.toLocaleString("en-US") : "—"}</td>
-              </tr>
-            ))}
+            {weekly.map((r) => {
+              const row = series.find((s) => s.as_of === r.as_of);
+              return (
+                <tr key={r.as_of}>
+                  <td>{r.as_of}</td>
+                  <td>{formatBtc(r.btc)}</td>
+                  <td>{formatSats(r.sats_basic)}</td>
+                  <td>{row?.sats_fd != null ? formatSats(row.sats_fd) : "—"}</td>
+                  <td>{r.sata ? r.sata.toLocaleString("en-US") : "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

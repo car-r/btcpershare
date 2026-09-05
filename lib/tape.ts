@@ -1,4 +1,5 @@
 import { satsPerShare, btcYield, verdictFromYield, type Verdict } from "./sats";
+import { latest as latestFiling, sataShares, type FilingRow } from "./filings";
 
 export type Pill = "basic" | "fd" | "clean";
 
@@ -48,22 +49,44 @@ function assertSats(label: string, btc: number, shares: number, expected: number
   }
 }
 
+function lastWeekFromFiling(
+  f: FilingRow,
+  basis: string,
+  satsEnd: number,
+  labelFmt: (y: number, start: number, end: number) => string,
+): LastWeek | null {
+  if (f.satsChgPct == null || f.verdict == null || f.satsPrevAdso == null) return null;
+  const y = f.satsChgPct;
+  return {
+    verdict: f.verdict,
+    yield: y,
+    satsStart: f.satsPrevAdso,
+    satsEnd,
+    basis,
+    label: labelFmt(y, f.satsPrevAdso, satsEnd),
+  };
+}
+
 export const MSTR: Company = (() => {
-  const btc = 845050;
-  const basicShares = 420483000;
-  const adso = 450090000;
+  const f = latestFiling("MSTR");
+  if (!f || f.btcHeld == null || f.adso == null || f.basicShares == null || f.satsAdso == null) {
+    throw new Error("MSTR latest filing incomplete");
+  }
+  const btc = f.btcHeld;
+  const basicShares = f.basicShares;
+  const adso = f.adso;
   const fdso = 424479000; // do not use for FD pill
   void fdso;
   assertSats("MSTR basic", btc, basicShares, 200971);
   assertSats("MSTR ADSO", btc, adso, 187751);
-  const satsAdso = satsPerShare(btc, adso);
-  const lastWeekStart = 188628;
-  const y = btcYield(lastWeekStart, satsAdso);
-  const v = verdictFromYield(y);
+  const satsAdso = f.satsAdso;
+  const y = f.satsChgPct ?? btcYield(f.satsPrevAdso ?? 188628, satsAdso);
+  const v = f.verdict ?? verdictFromYield(y);
+  const lastWeekStart = f.satsPrevAdso ?? 188628;
   return {
     ticker: "MSTR",
     name: "Strategy",
-    asOf: "2026-08-30",
+    asOf: f.periodEnd,
     btc,
     basicShares,
     basicLabel: "basic",
@@ -74,9 +97,9 @@ export const MSTR: Company = (() => {
     cleanAsOf: "Sep 3, 2026 2:50pm ET",
     mnavSnapshot: 1.12,
     priceSnapshot: 141.64,
-    activities: [{ label: "ATM on", on: true }],
+    activities: [{ label: "ATM on", on: f.atmOn !== false }],
     lastBuy: {
-      btc: 4603,
+      btc: f.btcBought,
       avgPx: 80318,
       note: "+4,603 BTC @ $80,318 (sold 4,531,421 MSTR Aug 24–30)",
     },
@@ -86,14 +109,14 @@ export const MSTR: Company = (() => {
       satsStart: lastWeekStart,
       satsEnd: satsAdso,
       basis: "ADSO",
-      label: "DILUTIVE -0.46% ADSO (188,628 → 187,751)",
+      label: `DILUTIVE -0.46% ADSO (188,628 → 187,751)`,
     },
     preferredShares: null,
     preferredLabel: null,
     preferredInDenom: false,
     hasFdPill: true,
     sources: [
-      "https://www.sec.gov/Archives/edgar/data/1050446/000119312526375463/mstr-20260831.htm",
+      f.url ?? "https://www.sec.gov/Archives/edgar/data/1050446/000119312526375463/mstr-20260831.htm",
       "https://www.strategy.com/shares",
     ],
     heroDefaultPill: "fd",
@@ -101,20 +124,25 @@ export const MSTR: Company = (() => {
 })();
 
 export const ASST: Company = (() => {
-  const btc = 23156; // do not add estimated +143 BTC from Sep 3 SATA
-  const effectiveCommon = 93262570;
-  const afds = 96523351;
-  const sataOutstanding = 9073914;
+  const f = latestFiling("ASST");
+  if (!f || f.btcHeld == null || f.basicShares == null || f.adso == null || f.satsBasic == null) {
+    throw new Error("ASST latest filing incomplete");
+  }
+  const btc = f.btcHeld; // do not add estimated +143 BTC from Sep 3 SATA
+  const effectiveCommon = f.basicShares;
+  const afds = f.adso;
+  const sataOutstanding = sataShares(f);
   assertSats("ASST effective", btc, effectiveCommon, 24829);
   assertSats("ASST AFDS", btc, afds, 23990);
-  const lastWeekStart = 23813;
-  const lastWeekEnd = satsPerShare(btc, effectiveCommon);
-  const y = btcYield(lastWeekStart, lastWeekEnd);
-  const v = verdictFromYield(y);
+  const lastWeekStart = f.satsPrevAdso ?? 23813;
+  const lastWeekEnd = f.satsBasic;
+  // Prefer filing-copied chg; display still +4.3% via formatYieldPct
+  const y = f.satsChgPct ?? btcYield(lastWeekStart, lastWeekEnd);
+  const v = f.verdict ?? verdictFromYield(y);
   return {
     ticker: "ASST",
     name: "Strive",
-    asOf: "2026-08-28",
+    asOf: f.periodEnd,
     btc,
     basicShares: effectiveCommon,
     basicLabel: "basic",
@@ -126,11 +154,11 @@ export const ASST: Company = (() => {
     mnavSnapshot: null,
     priceSnapshot: null,
     activities: [
-      { label: "ATM on", on: true },
-      { label: "SATA on", on: true },
+      { label: "ATM on", on: f.atmOn !== false },
+      { label: "SATA on", on: f.sataOn !== false },
     ],
     lastBuy: {
-      btc: 1800,
+      btc: f.btcBought,
       avgPx: 79431,
       note: "+1,800 BTC @ $79,431 vs +3,579,147 common + 803,099 SATA",
     },
@@ -147,24 +175,29 @@ export const ASST: Company = (() => {
     preferredInDenom: false,
     hasFdPill: true,
     sources: [
-      "https://www.sec.gov/Archives/edgar/data/1920406/000162828026059468/asst-20260831.htm",
+      f.url ?? "https://www.sec.gov/Archives/edgar/data/1920406/000162828026059468/asst-20260831.htm",
     ],
     heroDefaultPill: "basic",
   };
 })();
 
 export const XXI: Company = (() => {
-  const btc = 43514;
-  const classA = 346636211;
+  const f = latestFiling("XXI");
+  if (!f || f.btcHeld == null || f.basicShares == null || f.satsBasic == null) {
+    throw new Error("XXI latest filing incomplete");
+  }
+  const btc = f.btcHeld;
+  const classA = f.basicShares;
   const classB = 215736011; // NO economic rights — do not dilute
   void classB;
   assertSats("XXI classA", btc, classA, 12553);
+  const lw = lastWeekFromFiling(f, "classA", f.satsBasic, () => "FLAT");
   return {
     ticker: "XXI",
     name: "Twenty One",
-    asOf: "2026-06-30",
+    asOf: f.periodEnd,
     btc,
-    pledgedBtc: 16116,
+    pledgedBtc: f.pledgedBtc ?? undefined,
     basicShares: classA,
     basicLabel: "basic",
     fdShares: null,
@@ -174,17 +207,17 @@ export const XXI: Company = (() => {
     cleanAsOf: null,
     mnavSnapshot: null,
     priceSnapshot: null,
-    activities: [{ label: "ATM off", on: false }],
+    activities: [{ label: "ATM off", on: f.atmOn === true }],
     lastBuy: {
       btc: null,
       avgPx: null,
       note: "No H1 2026 buys; 10-Q as of Jun 30 still 43,514 BTC",
     },
-    lastWeek: {
+    lastWeek: lw ?? {
       verdict: "flat",
       yield: 0,
-      satsStart: 12553,
-      satsEnd: 12553,
+      satsStart: f.satsBasic,
+      satsEnd: f.satsBasic,
       basis: "classA",
       label: "FLAT",
     },
@@ -193,7 +226,8 @@ export const XXI: Company = (() => {
     preferredInDenom: false,
     hasFdPill: false,
     sources: [
-      "https://www.sec.gov/Archives/edgar/data/2070457/000121390026087471/ea0299640-10q_twentyone.htm",
+      f.url ??
+        "https://www.sec.gov/Archives/edgar/data/2070457/000121390026087471/ea0299640-10q_twentyone.htm",
     ],
     heroDefaultPill: "basic",
   };

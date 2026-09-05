@@ -1,6 +1,7 @@
-/** 100-shares-over-time v1 — seed only, no EDGAR scrape. */
+/** 100-shares-over-time v1 — MSTR from filings ledger; ASST from seed (AFDS quarterly). */
 
 import seed from "@/data/100-shares-seed.json";
+import { latest, series as filingSeries } from "./filings";
 
 export type SharesPoint = {
   date: string;
@@ -16,12 +17,18 @@ export type SharesSeries = {
   points: SharesPoint[];
 };
 
-const MSTR_SERIES: SharesPoint[] = seed.mstr.series.map((p) => ({
-  date: p.date,
-  sats_adso: p.sats_adso,
-  btc_per_100: p.btc_per_100,
-  note: p.note,
-}));
+function btcPer100FromSats(satsAdso: number): number {
+  // Match seed rounding: 187751 → 0.1878
+  return Math.round(satsAdso / 100) / 1e4;
+}
+
+const MSTR_SERIES: SharesPoint[] = filingSeries("MSTR")
+  .filter((r) => r.satsAdso != null)
+  .map((r) => ({
+    date: r.periodEnd,
+    sats_adso: r.satsAdso as number,
+    btc_per_100: btcPer100FromSats(r.satsAdso as number),
+  }));
 
 const ASST_SERIES: SharesPoint[] = seed.asst.sats_seed_known.map((p) => ({
   date: p.date,
@@ -36,7 +43,7 @@ export const SHARES_CAPTION = seed.formula.caption as string;
 export const SHARES_FOOTER = seed.ui.footer as string;
 export const SHARE_CARD_SUB = seed.share_card.sub as string;
 
-/** sats_adso = btc_held * 1e8 / adso_shares (already in seed). */
+/** btc claimed by N shares = n * sats_adso / 1e8 */
 export function btcPerN(satsAdso: number, n: number): number {
   return (n * satsAdso) / 100_000_000;
 }
@@ -56,10 +63,15 @@ export function formatClaimedBtc(btc: number): string {
 export function sharesSeriesFor(ticker: string): SharesSeries | null {
   const t = ticker.toUpperCase();
   if (t === "MSTR") {
+    const live = latest("MSTR")?.satsAdso ?? seed.mstr.live.sats_adso;
+    if (MSTR_SERIES.length !== 7) throw new Error("MSTR 100-share must be 7 filing points");
+    if (MSTR_SERIES[MSTR_SERIES.length - 1].btc_per_100 !== 0.1878) {
+      throw new Error("MSTR 100-share end lock 0.1878");
+    }
     return {
       ticker: "MSTR",
       denomLabel: "ADSO",
-      liveSatsAdso: seed.mstr.live.sats_adso,
+      liveSatsAdso: live,
       points: MSTR_SERIES,
     };
   }
@@ -81,7 +93,8 @@ export function chartPointsFor(ticker: string, n: number): { date: string; btc: 
   return s.points.map((p) => ({
     date: p.date,
     sats_adso: p.sats_adso,
-    btc: scaleBtcPer100(p.btc_per_100, n),
+    // Prefer formula n * sats / 1e8; for default n=100 keep rounded seed axis via scale when n===100
+    btc: n === 100 ? scaleBtcPer100(p.btc_per_100, n) : btcPerN(p.sats_adso, n),
   }));
 }
 

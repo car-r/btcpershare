@@ -1,5 +1,5 @@
 import { COMPANIES } from "@/lib/tape";
-import { seriesFor } from "@/lib/snapshot";
+import { barsFor, seriesFor } from "@/lib/snapshot";
 import { asstQuarterly, asstSpark7 } from "@/lib/asst-quarterly";
 import { chartPointsFor, sharesSeriesFor } from "@/lib/shares-over-time";
 import { NextResponse } from "next/server";
@@ -22,17 +22,20 @@ export async function GET(_req: Request, ctx: Ctx) {
         live_sats_adso: overTime.liveSatsAdso,
         n100: chartPointsFor(t, 100),
         series: overTime.points,
-        note: "Seed only. Y-axis = BTC claimed by N shares. Step, no interpolate. No invented weekly ADSO.",
+        note: "Seed/filings. Y-axis = BTC claimed by N shares. Step, no interpolate. No invented weekly ADSO.",
       }
     : null;
+
+  const bars = barsFor(t);
 
   if (t === "ASST") {
     return NextResponse.json({
       ticker: t,
       feed: "series",
-      note: "Weekly series is sats_basic = Class A+B. Quarterly sats are AFDS. Do not mix denoms or interpolate 2025-09-30 to 2026-03-09.",
+      note: "Weekly series is sats_basic = Class A+B from filings/ASST.json. Quarterly sats are AFDS. Do not mix denoms or interpolate 2025-09-30 to 2026-03-09.",
       denom: { weekly: "class_a+class_b", quarterly: "AFDS" },
       series: seriesFor(ticker),
+      bars,
       quarterly_company: asstQuarterly(),
       sparkline_7: asstSpark7(),
       shares_over_time,
@@ -41,8 +44,12 @@ export async function GET(_req: Request, ctx: Ctx) {
   return NextResponse.json({
     ticker: t,
     feed: "series",
-    note: "Placeholder seed (latest filing plus prior-week lock). Full 8-K warehouse comes later.",
+    note:
+      t === "MSTR"
+        ? "Tape series is 2 pts (prior-week lock + latest). 100-share chart uses 7 filing seed points. Bars = rows with numeric satsChgPct only."
+        : "Snapshot filing only.",
     series: seriesFor(ticker),
+    bars,
     shares_over_time,
   });
 }

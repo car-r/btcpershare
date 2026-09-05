@@ -3,6 +3,7 @@ import { asstSeries, ASST_SERIES } from "./asst-series";
 import { satsPerShare, type Verdict } from "./sats";
 import { asstSataKpis, type AsstSataKpis } from "./strive-kpis";
 import { fetchAsstLast, fetchBtcSpot, fetchEquityLast, mnavMktCap, type LiveField, type Spot } from "./spot";
+import { bars as filingBars, latest as latestFiling } from "./filings";
 
 export type { LiveField };
 
@@ -51,6 +52,8 @@ export type SeriesPoint = {
 };
 
 function accessionFrom(c: Company): string | null {
+  const f = latestFiling(c.ticker);
+  if (f?.accession) return f.accession;
   const src = c.sources.find((s) => s.includes("sec.gov"));
   if (!src) return null;
   const parts = src.split("/");
@@ -110,6 +113,7 @@ export async function tapeSnapshot() {
     companies: COMPANIES.map((c) => {
       const row = snapshotRow(c);
       const px = pxByTicker[c.ticker] ?? { value: null, as_of: null, live: false, source: null };
+      // LIVE mNAV only — never stored on a filing
       const liveMnav = mnavMktCap(px.value, c.basicShares, c.btc, btcSpot.value);
       const priceField: LiveField =
         px.value != null
@@ -132,7 +136,9 @@ export function seriesFor(ticker: string): SeriesPoint[] {
   const c = COMPANIES.find((x) => x.ticker.toUpperCase() === ticker.toUpperCase());
   if (!c) return [];
   if (c.ticker === "ASST") return asstSeries();
-  const preset = ACCRETION_PRESETS.find((p) => p.ticker === c.ticker);
+
+  // MSTR tape series = 2 pts only (prior-week lock + latest). Do not invent weekly ADSO history.
+  const f = latestFiling(c.ticker);
   const latest: SeriesPoint = {
     as_of: c.asOf,
     btc: c.btc,
@@ -143,9 +149,15 @@ export function seriesFor(ticker: string): SeriesPoint[] {
     sata_shares: sataShares(c),
     strc_held: null,
     verdict: c.lastWeek?.verdict ?? null,
+    btc_yield_pct:
+      f?.satsChgPct != null ? Math.round(f.satsChgPct * 10000) / 100 : null,
     accession: accessionFrom(c),
     url: c.sources.find((s) => s.includes("sec.gov")) ?? null,
   };
+
+  if (c.ticker === "XXI") return [latest];
+
+  const preset = ACCRETION_PRESETS.find((p) => p.ticker === c.ticker);
   if (!preset) return [latest];
   const priorBtc = preset.startBtc;
   const priorBasic = preset.startShares;
@@ -164,4 +176,17 @@ export function seriesFor(ticker: string): SeriesPoint[] {
     url: null,
   };
   return [prior, latest];
+}
+
+/** Yield bars for one ticker (numeric satsChgPct rows only). */
+export function barsFor(ticker: string) {
+  return filingBars(ticker).map((r) => ({
+    ticker: r.ticker,
+    periodEnd: r.periodEnd,
+    filedAt: r.filedAt,
+    satsChgPct: r.satsChgPct as number,
+    verdict: r.verdict,
+    satsAdso: r.satsAdso,
+    satsBasic: r.satsBasic,
+  }));
 }
