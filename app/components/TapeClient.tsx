@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { COMPANIES, HERO_DEFAULT, satsForPill, type Pill } from "@/lib/tape";
 import { formatBtc, formatSats, formatYieldPct } from "@/lib/sats";
 import {
-  SHARES_CAPTION,
   SHARES_DEFAULT_N,
-  SHARES_FOOTER,
   SHARES_PRESETS,
   chartPointsFor,
   formatClaimedBtc,
@@ -217,24 +215,25 @@ export function TapeClient() {
           ))}
         </div>
 
-        <h3 className="shares-ot-title">
-          BTC claimed by {shares.toLocaleString("en-US")} shares of {ticker}
-        </h3>
         <p className="my-shares-out">
           {shares.toLocaleString("en-US")} shares of {ticker} → {formatClaimedBtc(claimedBtc)} BTC →{" "}
           {claimedSats.toLocaleString("en-US")} sats
         </p>
         <p className="my-shares-basis muted">
-          Using {claimedDenom}
+          {claimedDenom} · split-adjusted
           {overTimeLive
-            ? ` (${formatSats(overTimeLive.satsAdso)} sats/share).`
-            : ` (${formatSats(value)} sats/share).`}
+            ? ` · ${formatSats(overTimeLive.satsAdso)} sats/share`
+            : ` · ${formatSats(value)} sats/share`}
         </p>
 
         {overTimeSeries && chartPts.length > 0 ? (
           <>
-            <p className="shares-caption">{SHARES_CAPTION}</p>
-            <SharesOverTimeChart points={chartPts} ticker={ticker} n={shares} />
+            <SharesOverTimeChart
+              points={chartPts}
+              ticker={ticker}
+              n={shares}
+              denomLabel={overTimeSeries.denomLabel}
+            />
             <ShareCard
               ticker={ticker}
               n={shares}
@@ -248,8 +247,6 @@ export function TapeClient() {
             Live claim only for ${ticker} — no seed series yet (no invented chart).
           </p>
         )}
-
-        <p className="shares-footer muted">{SHARES_FOOTER}</p>
         <Link className="calc-inline-link" href="/calc">
           Full calculator →
         </Link>

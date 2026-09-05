@@ -485,3 +485,23 @@ button.primary {
   cursor: pointer;
 }
 button.primary:hover { filter: brightness(1.05); }
+
+.shares-chart-chrome {
+  padding: 0.65rem 0.85rem 0.15rem;
+}
+.shares-chart-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+.shares-chart-sub {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.shares-chart-footer {
+  padding: 0.15rem 0.85rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}

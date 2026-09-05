@@ -3,9 +3,7 @@ import { useMemo, useState } from "react";
 import { COMPANIES, satsForPill, type Pill } from "@/lib/tape";
 import { formatSats } from "@/lib/sats";
 import {
-  SHARES_CAPTION,
   SHARES_DEFAULT_N,
-  SHARES_FOOTER,
   SHARES_PRESETS,
   chartPointsFor,
   formatClaimedBtc,
@@ -54,15 +52,21 @@ export function SatsCalc() {
             <button key={p} type="button" className="shares-preset" aria-pressed={n === p} onClick={() => setN(p)}>{p}</button>
           ))}
         </div>
-        <h3 className="shares-ot-title">BTC claimed by {n} shares of {ticker}</h3>
         <p className="my-shares-out">
           {n} ${ticker} → {formatClaimedBtc(claimed)} BTC
           {live ? ` → ${live.sats.toLocaleString("en-US")} sats` : null}
         </p>
+        <p className="my-shares-basis muted">
+          {(series?.denomLabel ?? (safe === "fd" ? (company.fdLabel ?? "ADSO") : safe))} · split-adjusted
+        </p>
         {series && chartPts.length > 0 ? (
           <>
-            <p className="shares-caption">{SHARES_CAPTION}</p>
-            <SharesOverTimeChart points={chartPts} ticker={ticker} n={n} />
+            <SharesOverTimeChart
+              points={chartPts}
+              ticker={ticker}
+              n={n}
+              denomLabel={series.denomLabel}
+            />
             <ShareCard
               ticker={ticker}
               n={n}
@@ -77,7 +81,6 @@ export function SatsCalc() {
             <ShareCard ticker={company.ticker} line={formatSats(value) + " sats/share"} sub={safe === "fd" ? (company.fdLabel ?? "FD") : safe} />
           </>
         )}
-        <p className="shares-footer muted">{SHARES_FOOTER}</p>
       </section>
     </div>
   );
